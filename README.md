@@ -219,3 +219,180 @@ This work is made available under the Nvidia Source Code License-NC. To view a c
 ## Acknowledgements
 
 We thank Ming-Yu Liu for an early review, Timo Viitanen for his help with code release, and Tero Kuosmanen for compute infrastructure.
+
+## Setup
+
+### Ubuntu
+
+Check Ubuntu version:
+```bash
+lsb_release -a
+```
+
+### Install the NVIDIA driver
+
+This might be an optional step, but it is always good to first remove potential previously installed NVIDIA drivers:
+```bash
+sudo apt-get purge *nvidia*
+sudo apt autoremove
+```
+
+Next, let's install the latest driver:
+```bash
+sudo apt install nvidia-driver-455
+```
+
+After this, we need to restart the computer to finalize the driver installation. Next we can verify whether the drive was succesfully installed:
+```bash
+nvidia-smi
+```
+
+```
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 455.23.05    Driver Version: 455.23.05    CUDA Version: 11.1     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  GeForce RTX 2060    On   | 00000000:01:00.0 Off |                  N/A |
+| N/A   44C    P8     7W /  N/A |    182MiB /  5934MiB |      5%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|    0   N/A  N/A      1624      G   /usr/lib/xorg/Xorg                110MiB |
+|    0   N/A  N/A      1826      G   /usr/bin/gnome-shell               17MiB |
+|    0   N/A  N/A      2197      G   ...AAAAAAAA== --shared-files       48MiB |
+|    0   N/A  N/A      3085      G   ...f_2643.log --shared-files        2MiB |
++-----------------------------------------------------------------------------+
+```
+
+The dependencies of `nvidia-driver-455` is as below:
+```bash
+nvidia-driver-455 :  Depends: libnvidia-extra-455 (= 455.38-0ubuntu0.20.04.1) but it is not going to be installed
+                     Depends: nvidia-compute-utils-455 (= 455.38-0ubuntu0.20.04.1) but it is not going to be installed
+                     Depends: libnvidia-encode-455 (= 455.38-0ubuntu0.20.04.1) but it is not going to be installed
+                     Depends: nvidia-utils-455 (= 455.38-0ubuntu0.20.04.1) but it is not going to be installed
+                     Depends: xserver-xorg-video-nvidia-455 (= 455.38-0ubuntu0.20.04.1) but it is not going to be installed
+                     Depends: libnvidia-ifr1-455 (= 455.38-0ubuntu0.20.04.1) but it is not going to be installed
+                     Recommends: libnvidia-compute-455:i386 (= 455.38-0ubuntu0.20.04.1)
+                     Recommends: libnvidia-decode-455:i386 (= 455.38-0ubuntu0.20.04.1)
+                     Recommends: libnvidia-encode-455:i386 (= 455.38-0ubuntu0.20.04.1)
+                     Recommends: libnvidia-ifr1-455:i386 (= 455.38-0ubuntu0.20.04.1)
+                     Recommends: libnvidia-fbc1-455:i386 (= 455.38-0ubuntu0.20.04.1)
+```
+
+### Install CUDA Toolkit
+
+Next we can install the CUDA toolkit:
+
+```bash
+sudo apt install nvidia-cuda-toolkit
+```
+
+We also need to set the CUDA_PATH. Add this:
+```bash
+export CUDA_PATH=/usr
+```
+
+at the end of your .bashrc and run:
+```bash
+source ~/.bashrc
+```
+
+Now your CUDA installation should be complete, and:
+```bash
+nvidia-smi
+```
+
+### Test the CUDA toolkit installation / configuration
+
+One of the best way to verify whether CUDA is properly installed is using the official "CUDA-sample". Ubuntu does not package them as part of "nvidia-cuda-toolkit" but we can download them directly from NVIDIA's github page:
+```bash
+wget https://github.com/NVIDIA/cuda-samples/archive/v11.1.tar.gz
+tar xvf v11.1.tar.gz 
+cd cuda-samples-11.1
+```
+
+For whatever reason, NVIDIA did not choose to include a modern build system (e.g. CMake), but ships a plain old Makefile instead. If just running "make" does not work for you, carefully read the error messages and see whether e.g. some required dependencies are not installed.
+
+In order to help the build process a little, it might be advisable to specify the compute architecture of your GPU.
+
+1. You can find out your GPU by running nvidia-smi. Mine is a GeForce RTX 2060.
+2. Next google your GPU to find out the corresponding compute architecture. For the GeForce RTX 2060, it is "turing", version 7.5.
+3. Specify the architecture version when running make, e.g.
+
+```bash
+make SMS="75"
+```
+
+If the compilation was succesful, you can try out one of the samples, e.g.
+```bas
+./bin/x86_64/linux/release/immaTensorCoreGemm 
+```
+
+You should see the following or similar output:
+```
+Initializing...
+GPU Device 0: "Turing" with compute capability 7.5
+
+M: 4096 (16 x 256)
+N: 4096 (16 x 256)
+K: 4096 (16 x 256)
+Preparing data for GPU...
+Required shared memory size: 64 Kb
+Computing... using high performance kernel compute_gemm_imma 
+Time: 6.320640 ms
+TOPS: 21.74
+```
+
+Also try:
+```bash
+nvcc --version
+```
+
+You should see the following result:
+```
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2020 NVIDIA Corporation
+Built on Wed_Jul_22_19:09:09_PDT_2020
+Cuda compilation tools, release 11.0, V11.0.221
+Build cuda_11.0_bu.TC445_37.28845127_0
+```
+
+### Tensorflow
+
+Create python 3.6 environment:
+```bash
+conda create --name py3.6 python=3.6
+conda activate py3.6
+```
+
+Use GPU version of tensorflow when tensorflow version is less than 2.0+,
+```bash
+conda install -c anaconda tensorflow-gpu=1.14
+```
+
+Check the installed version of tensorflow:
+```bash
+conda list
+```
+
+Check if tensorflow sees your GPU:
+```python
+from tensorflow.python.client import device_lib
+
+local_device_protos = device_lib.list_local_devices()
+print(local_device_protos)
+```
+
+## References
+* https://askubuntu.com/questions/1288672/how-do-you-install-cuda-11-on-ubuntu-20-10-and-verify-the-installation
+* https://en.wikipedia.org/wiki/Turing_(microarchitecture)
+* https://stackoverflow.com/questions/41402409/tensorflow-doesnt-seem-to-see-my-gpu
+* https://www.tensorflow.org/install/gpu#hardware_requirements
